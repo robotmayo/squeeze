@@ -67,7 +67,7 @@ test("parsesCall", t => {
     {
       args: {
         prefix: "http_header",
-        line: "http_header(good-/)paren): PHP/5.3"
+        line: "http_header(good-\\)paren): PHP/5.3"
       },
       expect: {
         result: {
@@ -75,12 +75,23 @@ test("parsesCall", t => {
           value: " PHP/5.3"
         }
       }
+    },
+    {
+      args: {
+        prefix: "http_header",
+        line: "http_header(bad colon) : PHP/5.3"
+      },
+      expect: {
+        result: {
+          key: "",
+          value: ""
+        }
+      }
     }
   ];
   const b = new Builder("");
-  testTable.slice(-1).map(tt => {
+  testTable.map(tt => {
     const res = b.callParser(tt.args.prefix, tt.args.line);
-    console.log(res.key);
     t.deepEqual(res, tt.expect.result);
   });
 });
