@@ -17,7 +17,7 @@ export interface SiteConfig {
   stripIDOrClass: string[];
   stripImageSrc: string[];
   nativeAdClue: string[];
-  httpHeaders: string[];
+  httpHeaders: Map<string, string>;
   stringReplacer: Map<string, string>;
 
   /*
@@ -133,7 +133,7 @@ export default class ConfigBuilder {
       stripIDOrClass: [],
       stripImageSrc: [],
       nativeAdClue: [],
-      httpHeaders: [],
+      httpHeaders: new Map(),
       autodetectOnfailure: false,
       requiresLogin: false,
       loginExtraFields: [{}],
@@ -186,8 +186,19 @@ export default class ConfigBuilder {
         config.stringReplacer.set(findString, replaceString);
         return;
       }
+      if (line.startsWith("replace_string(")) {
+        const res = this.callParser("replace_string", line);
+        if (res.key === "") return;
+        config.stringReplacer.set(res.key, res.value);
+        return;
+      }
+      if (line.startsWith("http_header(")) {
+        const res = this.callParser("http_header", line);
+        if (res.key === "") return;
+        config.httpHeaders.set(res.key, res.value);
+        return;
+      }
     });
-
     return config;
   }
 
@@ -226,15 +237,15 @@ export default class ConfigBuilder {
 
   async loadConfigs(dir: string) {
     const files = await util.promisify(fs.readdir)(dir, { encoding: "utf-8" });
-    const fileData = await throat(10)(() =>
-      Promise.all(
+    const fileData = await throat(10)(() => {
+      return Promise.all(
         files.map(async f => {
           const contents = readFile(f, {
             encoding: "utf-8"
           });
           return { filename: f, contents };
         })
-      )
-    );
+      );
+    });
   }
 }
