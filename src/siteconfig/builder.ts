@@ -192,29 +192,35 @@ export default class ConfigBuilder {
   }
 
   callParser(prefix: string, line: string): { key: string; value: string } {
-    logger.debug("KEY STUFF", { line });
     let key = "";
     let value = "";
     if (!line.startsWith(prefix + "(")) return { key, value };
     let rest = line.substring(line.indexOf("(") + 1);
     let lastChar = "";
+    let add = true;
     let endingParenIndex = -1;
-
     for (let i = 0; i < rest.length; i++) {
       const char = rest[i];
-      if (char === ")" && lastChar != "/") {
+      if (char === ")" && lastChar != "\\") {
         endingParenIndex = i;
         break;
       }
+      if (char === "\\" && rest[i + 1] == ")") {
+        add = false;
+      }
+      if (add) {
+        key += char;
+      }
       lastChar = char;
+      add = true;
     }
     // invalid syntax leave
-    if (endingParenIndex === -1) return { key, value };
+    if (endingParenIndex === -1) return { key: "", value };
     if (rest[endingParenIndex + 1] != ":") {
-      return { key, value };
+      return { key: "", value };
     }
     value = rest.substring(endingParenIndex + 2);
-    key = rest.substring(0, endingParenIndex);
+    // key = rest.substring(0, endingParenIndex);
     return { key, value };
   }
 
