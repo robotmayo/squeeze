@@ -1,11 +1,12 @@
 import * as fs from "fs";
 import * as util from "util";
 
-import m from "@openfin/snog";
-import throat from "throat";
-const logger = m.make("siteconfig/builder");
+import logger from "@openfin/snog";
+import * as pMap from "p-map";
+import { basename, resolve } from "path";
 
 const readFile = util.promisify(fs.readFile);
+const readdir = util.promisify(fs.readdir);
 
 export interface SiteConfig {
   // The following are expected to be jquery/querySelector style strings
@@ -159,6 +160,7 @@ export default class ConfigBuilder {
       if (cmd === "" || cmdValue === "") return;
 
       if (MULTI_COMMANDS[cmd]) {
+        logger.addField("COMMAND", cmd).info("Command used");
         (config[cmd] as string[]).push(cmdValue);
         return;
       }
@@ -231,21 +233,23 @@ export default class ConfigBuilder {
       return { key: "", value };
     }
     value = rest.substring(endingParenIndex + 2);
-    // key = rest.substring(0, endingParenIndex);
     return { key, value };
   }
 
   async loadConfigs(dir: string) {
-    const files = await util.promisify(fs.readdir)(dir, { encoding: "utf-8" });
-    const fileData = await throat(10)(() => {
-      return Promise.all(
-        files.map(async f => {
-          const contents = readFile(f, {
-            encoding: "utf-8"
-          });
-          return { filename: f, contents };
-        })
-      );
-    });
+    const files = (await readdir(dir, { encoding: "utf-8" })) as string[];
+    const configData = await pMap(
+      files,
+      async f => {
+        logger.addField("PATH", f).info("STARITNG THIS");
+        const path = resolve(dir, f);
+        const contents = await readFile(path, "utf-8");
+        const config = this.parseConfigLines(contents);
+        const name = basename(f);
+        this.siteConfigs.set(name, config);
+        return { path, config, name };
+      },
+      { concurrency: 1 }
+    );
   }
 }

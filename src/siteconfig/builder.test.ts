@@ -1,6 +1,8 @@
 import test from "ava";
 
 import Builder from "./builder";
+import { resolve } from "path";
+const FIXTURES = resolve(__dirname, "../", "fixtures");
 
 test("parsesCall", t => {
   interface TestTableInput {
@@ -92,6 +94,13 @@ test("parsesCall", t => {
   const b = new Builder("");
   testTable.map(tt => {
     const res = b.callParser(tt.args.prefix, tt.args.line);
+
     t.deepEqual(res, tt.expect.result);
   });
+});
+
+test.only("using testconfigs ", async t => {
+  const b = new Builder(resolve(FIXTURES, "testconfigs"));
+  await b.loadConfigs(b.siteConfigsDir);
+  t.fail("Not Yet Implemented");
 });
